@@ -1,0 +1,11 @@
+# Ignore artifacts:
+build
+dist
+node_modules
+public
+
+# .prettierignore
+src-tauri/target
+
+# .eslintignore
+src-tauri/target
