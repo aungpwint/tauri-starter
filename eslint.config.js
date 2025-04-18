@@ -19,7 +19,8 @@ export default [
             globals: {
                 document: 'readonly',
                 HTMLElement: 'readonly',
-                process: 'readonly'
+                process: 'readonly',
+                __dirname: 'readonly'
             }
         },
         plugins: {
