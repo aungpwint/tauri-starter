@@ -43,7 +43,7 @@
                 "cancelLabel": "Later"
             },
             "endpoints": [
-                "httpshttps://github.com/aungpwint/tauri-starter/releases/latest/download/latest.json"
+                "https://github.com/aungpwint/tauri-starter/releases/latest/download/latest.json"
             ],
             "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVBMUI1NjFCRTJBNzdDRkEKUldUNmZLZmlHMVliNnM2MnU5aFRnTmxmV1puUXFGUStyUDVvQnVpa3oyWjgvYWlpOVpUK2hnSzIK",
             "windows": {

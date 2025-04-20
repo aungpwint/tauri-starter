@@ -47,7 +47,7 @@ jobs:
                   key: ${{ matrix.target }}
 
             - name: Build Frontend
-              run: bun build
+              run: bun frontend:build
 
             - name: Install Rust target
               run: rustup target add ${{ matrix.target }}
@@ -55,7 +55,6 @@ jobs:
             - name: Inject Tauri secrets into config
               run: |
                   sed -i.bak "s|__TAURI_PUBLIC_KEY__|${{ secrets.TAURI_PUBLIC_KEY }}|" src-tauri/tauri.conf.json
-                  sed -i.bak "s|__TAURI_UPDATER_ENDPOINT__|${{ secrets.TAURI_UPDATER_ENDPOINT }}|" src-tauri/tauri.conf.json
 
             - name: Build Tauri
               run: bun tauri:build --target ${{ matrix.target }}
