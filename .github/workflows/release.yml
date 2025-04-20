@@ -1,0 +1,137 @@
+name: Release
+
+on:
+    push:
+        branches:
+            - main
+        paths-ignore:
+            - 'docs/**'
+            - 'README.md'
+            - 'CHANGELOG.md'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    build:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - build: macos
+                      os: macos-latest
+                      arch: aarch64
+                      target: aarch64-apple-darwin
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup bun
+              uses: oven-sh/setup-bun@v1
+
+            - name: Install dependencies
+              run: bun install
+
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: ${{ matrix.target }}
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  key: ${{ matrix.target }}
+
+            - name: Build Frontend
+              run: bun build
+
+            - name: Install Rust target
+              run: rustup target add ${{ matrix.target }}
+
+            - name: Inject Tauri secrets into config
+              run: |
+                  sed -i.bak "s|__TAURI_PUBLIC_KEY__|${{ secrets.TAURI_PUBLIC_KEY }}|" src-tauri/tauri.conf.json
+                  sed -i.bak "s|__TAURI_UPDATER_ENDPOINT__|${{ secrets.TAURI_UPDATER_ENDPOINT }}|" src-tauri/tauri.conf.json
+
+            - name: Build Tauri
+              run: bun tauri:build --target ${{ matrix.target }}
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GH_BOT_PAT }}
+                  TAURI_PUBLIC_KEY: ${{ secrets.TAURI_PUBLIC_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+                  TAURI_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+                  TAURI_UPDATER_ENDPOINT: ${{ secrets.TAURI_UPDATER_ENDPOINTS }}
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: artifacts-${{ matrix.arch }}
+                  path: |
+                      ./src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+                      ./src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.*
+
+    release:
+        needs: [build]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup bun
+              uses: oven-sh/setup-bun@v1
+
+            - name: Install dependencies
+              run: bun install
+
+            - name: Setup git user
+              run: |
+                  git config --global user.name "aungpwint"
+                  git config --global user.email "aungpwintofficial@gmail.com"
+
+            - name: Set new version
+              id: set_version
+              run: |
+                  bun changeset status --output=release.json
+                  VERSION=$(jq -r '.releases[0].newVersion' release.json)
+                  echo "new_version=$VERSION" >> $GITHUB_OUTPUT
+                  rm release.json
+
+            - name: Create Release Pull Request
+              id: changesets
+              uses: changesets/action@v1
+              with:
+                  title: 'release v${{ steps.set_version.outputs.new_version }}'
+                  commit: 'release v${{ steps.set_version.outputs.new_version }}'
+                  setupGitUser: false
+                  publish: bun run publish
+                  version: bun run version
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GH_BOT_PAT }}
+
+            - name: Download application assets
+              if: steps.changesets.outputs.published == 'true'
+              uses: actions/download-artifact@v4
+              with:
+                  name: artifacts-aarch64
+                  path: artifacts/aarch64
+
+            - name: Upload application assets to the latest release
+              if: steps.changesets.outputs.published == 'true'
+              env:
+                  GH_TOKEN: ${{ secrets.GH_BOT_PAT }}
+              run: |
+                  VERSION=${{ steps.set_version.outputs.new_version }}
+                  APP_NAME=$(jq -r '.package.productName' src-tauri/tauri.conf.json | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+
+                  mv "artifacts/aarch64/dmg/${APP_NAME}_${VERSION}_aarch64.dmg" "artifacts/${APP_NAME}_${VERSION}_macos_aarch64.dmg"
+                  mv "artifacts/aarch64/macos/${APP_NAME}.app.tar.gz" "artifacts/${APP_NAME}_${VERSION}_macos_aarch64.app.tar.gz"
+                  mv "artifacts/aarch64/macos/${APP_NAME}.app.tar.gz.sig" "artifacts/${APP_NAME}_${VERSION}_macos_aarch64.app.tar.gz.sig"
+
+                  gh release upload v$VERSION "artifacts/${APP_NAME}_${VERSION}_macos_aarch64.dmg"
+                  gh release upload v$VERSION "artifacts/${APP_NAME}_${VERSION}_macos_aarch64.app.tar.gz"
+                  gh release upload v$VERSION "artifacts/${APP_NAME}_${VERSION}_macos_aarch64.app.tar.gz.sig"

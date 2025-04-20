@@ -23,6 +23,7 @@
     },
     "bundle": {
         "active": true,
+        "createUpdaterArtifacts": true,
         "targets": "all",
         "icon": [
             "icons/32x32.png",
@@ -31,5 +32,23 @@
             "icons/icon.icns",
             "icons/icon.ico"
         ]
+    },
+    "plugins": {
+        "updater": {
+            "active": true,
+            "dialog": {
+                "title": "Update Available",
+                "description": "A new version of the app is available. Would you like to update?",
+                "okLabel": "Update",
+                "cancelLabel": "Later"
+            },
+            "endpoints": [
+                "httpshttps://github.com/aungpwint/tauri-starter/releases/latest/download/latest.json"
+            ],
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVBMUI1NjFCRTJBNzdDRkEKUldUNmZLZmlHMVliNnM2MnU5aFRnTmxmV1puUXFGUStyUDVvQnVpa3oyWjgvYWlpOVpUK2hnSzIK",
+            "windows": {
+                "installMode": "passive"
+            }
+        }
     }
 }
