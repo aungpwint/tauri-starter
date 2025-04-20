@@ -51,18 +51,6 @@ jobs:
                     -replace '__TAURI_PUBLIC_KEY__', '${{ secrets.TAURI_PUBLIC_KEY }}' |
                     Set-Content src-tauri/tauri.conf.json
 
-            - name: 🔍 Check Environment Secrets
-              run: |
-                  echo "TAURI_PUBLIC_KEY set? => ${env:TAURI_PUBLIC_KEY}"
-                  echo "TAURI_SIGNING_PRIVATE_KEY set? => ${env:TAURI_SIGNING_PRIVATE_KEY}"
-                  echo "TAURI_PRIVATE_KEY_PASSWORD set? => ${env:TAURI_PRIVATE_KEY_PASSWORD}"
-                  echo "TAURI_UPDATER_ENDPOINT set? => ${env:TAURI_UPDATER_ENDPOINT}"
-              env:
-                  TAURI_PUBLIC_KEY: ${{ secrets.TAURI_PUBLIC_KEY }}
-                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-                  TAURI_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-                  TAURI_UPDATER_ENDPOINT: ${{ secrets.TAURI_UPDATER_ENDPOINTS }}
-
             - name: 🚀 Build Tauri App
               run: bun run tauri:build --target x86_64-pc-windows-msvc
               env:
